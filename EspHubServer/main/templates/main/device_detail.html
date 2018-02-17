@@ -1,0 +1,170 @@
+{% extends "main/base.html" %}
+
+{% block title %}Device detail{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col s12 m6 l6">
+            <h3>{{ device.name }}</h3>
+        </div>
+        <div class="col s12 m6 l6">
+
+            {# setting buttons #}
+            <div class="right-align" style="padding-top: 2em">
+                <a class="waves-effect waves-light btn red darken-1" href="#modal-remove">Remove</a>
+                <a class="waves-effect waves-light btn blue-grey darken-1" href="#modal-edit">Edit</a>
+            </div>
+
+        </div>
+    </div>
+
+    {# modal windows for setting buttons #}
+    {% include "main/device_detail_modals.html" with id=device.id edit_device_form=edit_device_form edit_ability_formset=edit_ability_formset %}
+
+    {# status and value cards #}
+    <div class="row">
+        <div class="col s12 m8 l8">
+            {% if actual_values %}
+                {% include 'main/device_detail_values_card.html' with actual_values=actual_values %}
+            {% endif %}
+            {% if actual_out_values %}
+                {% include 'main/device_detail_control_card.html' with actual_out_values=actual_out_values device_id=device.id %}
+            {% endif %}
+        </div>
+        <div class="col s12 m4 l4">
+            {% include 'main/device_detail_status_card.html' %}
+        </div>
+    </div>
+
+    {# tabs with charts #}
+    <div class="row">
+        {#        {% include 'main/device_detail_tabs.html' with actual_values=actual_values %}#}
+        <nav class="nav-extended">
+            <div class="nav-content">
+
+                <ul id="tabs-swipe-demo" class="tabs custom-tabs z-depth-1 blue-grey darken-1 ">
+                    {% for value in actual_values %}
+                        <li class="tab col"><a href="#tab-{{ value.name }}">{{ value.value_type|capfirst }}</a></li>
+                    {% endfor %}
+                </ul>
+                <a class="btn-floating btn-large halfway-fab waves-light waves-effect orange darken-1"
+                   onclick="deviceDetailChart(window.tabValue); updatePlotSettingsStorage('{{ device.id }}', window.tabValue)">
+                    <i class="material-icons">send</i>
+                </a>
+            </div>
+        </nav>
+
+        {# div first-tab-value indicate which tab will be loadef first (before clicking on tab), parameter data-value is used as input for script deviceDetailChart #}
+        <div id="first-tab-value" data-value="{{ actual_values.0.name }}" hidden></div>
+        {% for value in actual_values %}
+            <div id="tab-{{ value.name }}" data-name="{{ value.name }}" class="col s12 grey lighten-4">
+
+                <div class="row" style="margin-top: 0.5em;">
+                    <div class="col s4 l4">
+                        <div class="input-field">
+                            <input id="date-range-input-{{ value.name }}" class="date-range datepicker" type="text"/>
+                            <label for="date-range-input-{{ value.name }}">Select date range</label>
+                        </div>
+                    </div>
+                    <div class="col s4 l3">
+                        <div class="input-field">
+                            <select id="summarize-select-{{ value.name }}">
+                                <option value="now">Now</option>
+                                <option value="minutely" selected>Minutes</option>
+                                <option value="hourly">Hours</option>
+                                <option value="daily">Days</option>
+                                <option value="weekly">Weeks</option>
+                            </select>
+                            <label for="summarize-select-{{ value.name }}">Data sampling</label>
+                        </div>
+                    </div>
+                    <div class="col s4 l3">
+                        <div class="input-field">
+                            <select id="chart-type-select-{{ value.name }}">
+                                <option value="line" selected>Line</option>
+                                <option value="fill">Fill</option>
+                                <option value="bar">Bar</option>
+                            </select>
+                            <label for="chart-type-select-{{ value.name }}">Chart type</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="width: 100%;">
+                    {#                    <canvas id="canvas-tab-{{ value.name }}" data-url="{% url 'main:records_api' device.id value.name %}"#}
+                    {#                            height="150"></canvas>#}
+                    <div id="canvas-tab-{{ value.name }}" style="width: 100%;height:600px;" data-url="{% url 'Apis:get_values' device.id value.name %}"></div>
+                </div>
+            </div>
+        {% endfor %}
+
+    </div>
+
+    {% load static %} {# load javascript #}
+    {# https://sensortower.github.io/daterangepicker/ #}
+    <link type="text/css" rel="stylesheet" href="{% static 'main/css/daterangepicker.min.css' %}">
+    {#    import ChartJS plot library#}
+    <script type="text/javascript" src="{% static 'main/js_libs/Chart.bundle.js' %}"></script>
+    {#    import eChart plot library#}
+    <script type="text/javascript" src="{% static 'main/js_libs/echarts.common.min.js' %}"></script>
+    {# daterange picker dependency #}
+    <script type="text/javascript" src="{% static 'main/js_libs/knockout-3.4.2.js' %}"></script>
+    {# date range picker #}
+    <script type="text/javascript" src="{% static 'main/js_libs/daterangepicker.min.js' %}"></script>
+    {# URL manipulation https://github.com/tjenkinson/url-toolkit #}
+    <script type="text/javascript" src="{% static 'main/js_libs/URI.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js_libs/moment.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js/jquery.cookie.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js/updateDeviceStatus.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js/updateDeviceValues.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js/outputActionsAjax.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js/deviceDetailChart.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js/updatePlotSettingsStorage.js' %}"></script>
+    <script type="text/javascript" src="{% static 'main/js/loadPlotSettingsFromStorage.js' %}"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            loadPlotSettingsFromStorage("{{ device.id }}"); // load previous settings from local storage
+            $('select').material_select(); // initiate selects
+
+            // initiate all date pickers
+            $(".date-range").each(function (item, element) {
+                $('#' + this.id).daterangepicker({
+                    minDate: moment().subtract(2, 'years'),
+                    maxDate: [moment().add(2, 'days'), 'exclusive'],
+                    ranges: {
+                        'Last 3 days': [moment().subtract(2, 'days'), moment().add(1, 'days')],
+                        'Last 7 days': [moment().subtract(6, 'days'), moment().add(1, 'days')],
+                        'Last 14 days': [moment().subtract(13, 'days'), moment().add(1, 'days')],
+                        'Last 30 days': [moment().subtract(29, 'days'), moment().add(1, 'days')],
+                        'Last Year': [moment().subtract(1, 'year').add(1, 'day'), moment().add(1, 'days')],
+                        'All Time': 'all-time', // [minDate, maxDate]
+                        'Custom Range': 'custom'
+                    },
+                    callback: function (startDate, endDate, period) {
+                        $(this).val(startDate.format('DD.MM.YYYY') + '–' + endDate.format('DD.MM.YYYY'));
+                    }
+                });
+            });
+
+            updateDeviceStatus("{% url 'main:telemetry_api' device.id %}", {{ device_status_interval }});
+            updateDeviceValues("{% url 'main:device_actual_values_api' device.id %}", {{ device_values_interval }});
+
+            // init tab with charts
+            var firstValue = $('#first-tab-value')[0].attributes['data-value'].nodeValue;
+            deviceDetailChart(firstValue); // element first-tab-value is hidden and contain name of first tab
+            window.tabValue = firstValue; // set current active tab for floating action button
+
+            $('.modal').modal(); // init modal windows
+            $('.tooltipped').tooltip({delay: 50, position: 'top'}); // init tooltips
+            $('ul.tabs').tabs({
+                'swipeable': false,
+                'onShow': function (param) {
+                    var tabValue = param[0]['attributes'][1]['nodeValue'];
+                    window.tabValue = tabValue;
+                    deviceDetailChart(tabValue);
+                }
+            }); // init tabs
+        });
+    </script>
+{% endblock %}
